@@ -52,6 +52,16 @@ news:
 #   prompt: # 默认角色设定，如："你是智能聊天机器人,你叫小小，调皮可爱喜欢二次元的小萝莉"
 
 # 如果需要暴露 HTTP 接口，取消下面的注释
-# http:
-#   host: 0.0.0.0
-#   port: 9999
+http:
+  host: 0.0.0.0
+  port: 9999
+
+chatroom:
+  names: "华东|浙江|桂电|钱塘"
+
+commands:
+  enable: {
+    "天气预报": "weather",
+    "新闻推送": "news",
+    "人工智能": "chatgpt",
+  }

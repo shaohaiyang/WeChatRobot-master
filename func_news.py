@@ -11,7 +11,7 @@ import requests
 from lxml import etree
 
 
-class News(object):
+class NEWS(object):
     def __init__(self) -> None:
         self.LOG = logging.getLogger(__name__)
         self.week = {0: "周一", 1: "周二", 2: "周三", 3: "周四", 4: "周五", 5: "周六", 6: "周日"}
@@ -47,5 +47,5 @@ class News(object):
 
 
 if __name__ == "__main__":
-    news = News()
+    news = NEWS()
     print(news.get_important_news())

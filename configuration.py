@@ -31,3 +31,5 @@ class Config(object):
         self.CHATGPT = yconfig.get("chatgpt")
         self.HTTP = yconfig.get("http")
         self.NEWS = yconfig["news"]["receivers"]
+        self.CHATROOMS = yconfig["chatroom"]["names"]
+        self.COMMANDS = yconfig["commands"]["enable"]

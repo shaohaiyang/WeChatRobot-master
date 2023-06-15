@@ -21,6 +21,23 @@ class Http(FastAPI):
         self.add_api_route("/image", self.send_image, methods=["POST"], summary="发送图片消息")
         self.add_api_route("/file", self.send_file, methods=["POST"], summary="发送文件消息")
         self.add_api_route("/send", self.send_text_deprecated, methods=["GET"], summary="【已过时，不要再使用】发送消息")
+        self.add_api_route("/cmds", self.send_cmds, methods=["POST"], summary="发送命令")
+
+    def send_cmds(self, msg: str = Body("消息"), receiver: str = Body("filehelper"), aters: str = Body("")) -> dict:
+        print(f"{msg}....")
+        xx = "func_" + msg
+
+        str = f"from {xx} import {msg}"
+        print(f"{str}....")
+        exec(str)
+
+        str = f"{msg}.output()"
+        print(f"{str}....")
+        exec(str)
+        eval(str)
+
+        ret = exec(f"{msg}.output()")
+        return {"status": ret}
 
     def send_text(self, msg: str = Body("消息"), receiver: str = Body("filehelper"), aters: str = Body("")) -> dict:
         """ 发送消息，可参考：robot.py 里 sendTextMsg

@@ -4,6 +4,7 @@ import logging
 import re
 import time
 import xml.etree.ElementTree as ET
+import os
 
 from wcferry import Wcf, WxMsg
 
@@ -11,7 +12,7 @@ from configuration import Config
 from func_chatgpt import ChatGPT
 from func_chengyu import cy
 from func_http import Http
-from func_news import News
+from func_news import NEWS
 from job_mgmt import Job
 
 
@@ -24,11 +25,44 @@ class Robot(Job):
         self.config = config
         self.LOG = logging.getLogger("Robot")
         self.wxid = self.wcf.get_self_wxid()
-        self.allContacts = self.getAllContacts()
+        self.allContacts = self.getAllContacts() # 新获取名单的函数
         self.chat = None
+        self.reloadconfig()
         chatgpt = self.config.CHATGPT
         if chatgpt:
             self.chat = ChatGPT(chatgpt.get("key"), chatgpt.get("api"), chatgpt.get("proxy"), chatgpt.get("prompt"))
+    
+
+    def reloadconfig(self):
+        pwd = os.path.dirname(os.path.abspath(__file__))
+        """寻找模糊匹配的群组，放入接收的组变量
+        """
+        self.LOG.info(f">>> 模糊匹配群 <<<  {self.config.CHATROOMS}") 
+        for wxID, wxName in self.allContacts.items():
+            if re.search(r"@chatroom", wxID, re.M|re.I):
+                if re.search(self.config.CHATROOMS, wxName, re.M|re.I):
+                    self.LOG.info(f">>> {wxID} -> {wxName}")
+                    self.config.GROUPS.append(wxID)
+        
+        """寻找要开启的函数列表，引入自定义扩展
+        """
+        for ID,Func in self.config.COMMANDS.items():
+            cmdFunc = Func.lower()
+            cmdFunc = "func_" + cmdFunc if not re.search(r"^func_", cmdFunc) else cmdFunc
+            cmdFunc = cmdFunc + ".py"   if not re.search(r".py$", cmdFunc) else cmdFunc
+
+            try:
+                with open(f"{pwd}/{cmdFunc}", "rb") as fp:
+                    cmdFunc = re.split(".py", cmdFunc)[0].lower()
+
+                    try:
+                        self.LOG.info(f">>> from {cmdFunc} import {Func}")
+                        #exec(f"from {cmdFunc} import {Func}")
+                    except Exception as e:
+                        self.LOG.error(f">>> {e}")
+            except FileNotFoundError:
+                self.LOG.error(f">>> 无法找到{ID}这个模块({cmdFunc})")
+ 
 
     def toAt(self, msg: WxMsg) -> bool:
         """处理被 @ 消息
@@ -68,7 +102,7 @@ class Robot(Job):
         """闲聊，接入 ChatGPT
         """
         if not self.chat:  # 没接 ChatGPT，固定回复
-            rsp = "你@我干嘛？"
+            rsp = "好的，等我一下=="
         else:  # 接了 ChatGPT，智能回复
             q = re.sub(r"@.*?[\u2005|\s]", "", msg.content).replace(" ", "")
             rsp = self.chat.get_answer(q, (msg.roomid if msg.from_group() else msg.sender))
@@ -117,9 +151,11 @@ class Robot(Job):
         elif msg.type == 0x01:   # 文本消息
             # 让配置加载更灵活，自己可以更新配置。也可以利用定时任务更新。
             if msg.from_self():
-                if msg.content == "^更新$":
+                #if msg.content == "^更新$":
+                if re.findall(r"更新", msg.content):
                     self.config.reload()
-                    self.LOG.info("已更新")
+                    self.reloadconfig()
+                    self.LOG.info(f">>> 收到文本更新了。")
             else:
                 self.toChitchat(msg)  # 闲聊
 
@@ -162,8 +198,8 @@ class Robot(Job):
         获取联系人（包括好友、公众号、服务号、群成员……）
         格式: {"wxid": "NickName"}
         """
-        contacts = self.wcf.query_sql("MicroMsg.db", "SELECT UserName, NickName FROM Contact;")
-        return {contact["UserName"]: contact["NickName"]for contact in contacts}
+        contacts = self.wcf.query_sql("MicroMsg.db", "SELECT UserName, NickName, Remark FROM Contact;")
+        return {contact["UserName"]: contact["Remark"] if contact["Remark"] else contact["NickName"] for contact in contacts}
 
     def keepRunningAndBlockProcess(self) -> None:
         """
@@ -209,6 +245,6 @@ class Robot(Job):
         if not receivers:
             return
 
-        news = News().get_important_news()
+        news = NEWS().get_important_news()
         for r in receivers:
             self.sendTextMsg(news, r)
