@@ -1,12 +1,9 @@
 # -*- coding: utf-8 -*-
-
 import logging
 import re
 import time
 import xml.etree.ElementTree as ET
 import os
-
-from wcferry import Wcf, WxMsg
 
 from configuration import Config
 from func_chatgpt import ChatGPT
@@ -14,6 +11,7 @@ from func_chengyu import cy
 from func_http import Http
 from func_news import NEWS
 from job_mgmt import Job
+from wcferry import Wcf, WxMsg
 
 
 class Robot(Job):
